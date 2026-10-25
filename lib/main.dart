@@ -16,8 +16,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:flutter/foundation.dart';
+void main() {
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
+  }
 
-void main() => runApp(const TheFeedApp());
+  runApp(const TheFeedApp());
+}
 
 // ---------------------------------------------------------------------------
 // CONSTANTS + GLOBALS
@@ -110,11 +117,29 @@ class DB {
   static Database? _db;
 
   static Future<Database> get db async {
-    if (_db != null) return _db!;
-    final path = p.join(await getDatabasesPath(), 'the_feed_v2.db');
-    _db = await openDatabase(path, version: 1, onCreate: (d, v) => _create(d));
-    return _db!;
+  if (_db != null) return _db!;
+
+  if (kIsWeb) {
+    _db = await openDatabase(
+      'the_feed_web.db',
+      version: 1,
+      onCreate: (d, v) => _create(d),
+    );
+  } else {
+    final path = p.join(
+      await getDatabasesPath(),
+      'the_feed_v2.db',
+    );
+
+    _db = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (d, v) => _create(d),
+    );
   }
+
+  return _db!;
+}
 
   static Future<void> _create(Database d) async {
     await d.execute('''CREATE TABLE users(
